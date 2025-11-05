@@ -5,16 +5,17 @@ import { cn } from '../../design-system/utils';
 import SystemPromptsEditor from '../settings/SystemPromptsEditor';
 import SkillsManager from '../settings/SkillsManager';
 import ToolsManager from '../settings/ToolsManager';
+import CommandsBrowser from '../settings/CommandsBrowser';
 import Button from '../ui/Button';
 import Badge from '../ui/Badge';
 
 interface SettingsPanelProps {
   isOpen: boolean;
   onClose: () => void;
-  initialSection?: 'prompts' | 'skills' | 'tools' | 'settings';
+  initialSection?: 'prompts' | 'skills' | 'tools' | 'commands' | 'settings';
 }
 
-type SettingsSection = 'prompts' | 'skills' | 'tools' | 'settings';
+type SettingsSection = 'prompts' | 'skills' | 'tools' | 'commands' | 'settings';
 
 const SettingsPanel: React.FC<SettingsPanelProps> = ({
   isOpen,
@@ -35,6 +36,12 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({
       label: 'Skills',
       icon: Zap,
       description: 'Manage agent behaviors',
+    },
+    {
+      id: 'commands' as const,
+      label: 'Slash Commands',
+      icon: Terminal,
+      description: 'Quick actions',
     },
     {
       id: 'tools' as const,
@@ -152,6 +159,17 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({
                       exit={{ opacity: 0, x: -20 }}
                     >
                       <SkillsManager />
+                    </motion.div>
+                  )}
+
+                  {activeSection === 'commands' && (
+                    <motion.div
+                      key="commands"
+                      initial={{ opacity: 0, x: 20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      exit={{ opacity: 0, x: -20 }}
+                    >
+                      <CommandsBrowser />
                     </motion.div>
                   )}
 

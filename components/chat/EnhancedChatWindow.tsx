@@ -23,6 +23,7 @@ interface EnhancedChatWindowProps {
   isLoading?: boolean;
   currentUser: string;
   className?: string;
+  lmStudioStatus?: 'offline' | 'online' | 'error';
 }
 
 const EnhancedChatWindow: React.FC<EnhancedChatWindowProps> = ({
@@ -31,6 +32,7 @@ const EnhancedChatWindow: React.FC<EnhancedChatWindowProps> = ({
   isLoading = false,
   currentUser,
   className,
+  lmStudioStatus = 'offline',
 }) => {
   const [inputValue, setInputValue] = useState('');
   const [isComposing, setIsComposing] = useState(false);
@@ -130,6 +132,18 @@ const EnhancedChatWindow: React.FC<EnhancedChatWindowProps> = ({
           </div>
 
           <div className="flex items-center gap-2">
+            {/* LMStudio Status */}
+            {lmStudioStatus === 'online' && (
+              <Badge variant="success" size="sm" dot>
+                LMStudio
+              </Badge>
+            )}
+            {lmStudioStatus === 'error' && (
+              <Badge variant="error" size="sm" dot>
+                LMStudio Error
+              </Badge>
+            )}
+
             <Badge variant="primary" size="sm" dot>
               {messages.length} messages
             </Badge>
