@@ -99,10 +99,13 @@ export const builtinTools: Record<string, ToolExecutor> = {
 
 /**
  * ToolExecutionEngine manages tool execution and learns from results
+ * PHASE 2: Supports tool chaining
  */
 export class ToolExecutionEngine {
   private tools: Map<string, ToolExecutor>;
   private toolMemories: Map<string, ToolMemory>;
+  private executionDepth: number = 0;
+  private maxChainDepth: number = 3; // Prevent infinite loops
 
   constructor() {
     this.tools = new Map(Object.entries(builtinTools));
@@ -118,12 +121,22 @@ export class ToolExecutionEngine {
 
   /**
    * Execute a tool and learn from the result
+   * PHASE 2: Supports tool chaining with depth limiting
    */
   async executeTool(
     toolName: string,
     args: Record<string, any>,
     context: string = ''
   ): Promise<ToolResult> {
+    // Prevent infinite recursion
+    if (this.executionDepth >= this.maxChainDepth) {
+      return {
+        success: false,
+        output: '',
+        error: `Tool chain depth limit reached (max ${this.maxChainDepth})`,
+      };
+    }
+
     const tool = this.tools.get(toolName);
 
     if (!tool) {
@@ -134,8 +147,11 @@ export class ToolExecutionEngine {
       };
     }
 
+    // PHASE 2: Pre-process args to resolve tool calls
+    const resolvedArgs = await this.resolveToolChains(args);
+
     // Validate args if validator exists
-    if (tool.validate && !tool.validate(args)) {
+    if (tool.validate && !tool.validate(resolvedArgs)) {
       return {
         success: false,
         output: '',
@@ -144,13 +160,16 @@ export class ToolExecutionEngine {
     }
 
     try {
-      const result = await tool.execute(args);
+      this.executionDepth++;
+      const result = await tool.execute(resolvedArgs);
+      this.executionDepth--;
 
       // Learn from execution
-      this.recordToolExecution(toolName, context, args, result);
+      this.recordToolExecution(toolName, context, resolvedArgs, result);
 
       return result;
     } catch (error) {
+      this.executionDepth--;
       const errorResult: ToolResult = {
         success: false,
         output: '',
@@ -158,10 +177,62 @@ export class ToolExecutionEngine {
       };
 
       // Learn from failure too
-      this.recordToolExecution(toolName, context, args, errorResult);
+      this.recordToolExecution(toolName, context, resolvedArgs, errorResult);
 
       return errorResult;
     }
+  }
+
+  /**
+   * PHASE 2: Resolve nested tool calls in arguments
+   * Example: { expression: "10 + $calculate(2*5)" } → { expression: "10 + 10" }
+   */
+  private async resolveToolChains(args: Record<string, any>): Promise<Record<string, any>> {
+    const resolved: Record<string, any> = {};
+
+    for (const [key, value] of Object.entries(args)) {
+      if (typeof value === 'string') {
+        // Check for tool call pattern: $toolname(arg1, arg2, ...)
+        const toolCallPattern = /\$(\w+)\(([^)]*)\)/g;
+        let resolvedValue = value;
+        let match;
+
+        while ((match = toolCallPattern.exec(value)) !== null) {
+          const [fullMatch, nestedToolName, argsString] = match;
+
+          // Parse nested tool args (simple comma-separated for now)
+          const nestedArgs: Record<string, any> = {};
+          const argParts = argsString.split(',').map(s => s.trim());
+
+          if (nestedToolName === 'calculate') {
+            nestedArgs.expression = argsString;
+          } else if (nestedToolName === 'search_memory') {
+            nestedArgs.query = argsString;
+          } else {
+            // Generic: first arg is the main input
+            nestedArgs.input = argsString;
+          }
+
+          // Execute nested tool
+          const nestedResult = await this.executeTool(nestedToolName, nestedArgs, 'chained');
+
+          // Replace the tool call with its result
+          if (nestedResult.success) {
+            const replacement = nestedResult.metadata?.result?.toString() || nestedResult.output;
+            resolvedValue = resolvedValue.replace(fullMatch, replacement);
+          } else {
+            // If nested tool fails, keep the original placeholder
+            resolvedValue = resolvedValue.replace(fullMatch, `[Error: ${nestedResult.error}]`);
+          }
+        }
+
+        resolved[key] = resolvedValue;
+      } else {
+        resolved[key] = value;
+      }
+    }
+
+    return resolved;
   }
 
   /**

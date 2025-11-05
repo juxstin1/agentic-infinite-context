@@ -727,6 +727,10 @@ const App: React.FC = () => {
   const activeMessages = messages.filter(message => message.chat_id === activeChatId);
   const activeChat = chats.find(chat => chat.id === activeChatId) ?? null;
 
+  // Get learning stats for UI
+  const learningStats = learningEngineRef.current?.getStats();
+  const clusterSummary = learningEngineRef.current?.getClusterSummary();
+
   return (
     <div className="flex h-screen w-screen font-sans bg-slate-900 text-slate-200 overflow-hidden">
       <ChatListPanel
@@ -777,6 +781,8 @@ const App: React.FC = () => {
         onAddFact={addFact}
         cacheStats={cacheStats}
         cacheSize={Object.keys(cache).length}
+        learningStats={learningStats}
+        clusterSummary={clusterSummary}
       />
 
       {isModelManagerOpen && (

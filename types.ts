@@ -152,3 +152,17 @@ export interface MessageFeedback {
   ignored?: boolean;
   created_at: string;
 }
+
+export interface PromptPerformance {
+  id: string;
+  prompt_hash: string;
+  prompt_snippet: string;
+  model_id: string;
+  success_count: number;
+  failure_count: number;
+  total_uses: number;
+  avg_response_quality: number;
+  context_types: string[];
+  last_used: string;
+  created_at: string;
+}
