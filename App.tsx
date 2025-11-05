@@ -227,7 +227,7 @@ const App: React.FC = () => {
   const [hasPendingWork, setHasPendingWork] = useState(false);
   const [isModelManagerOpen, setModelManagerOpen] = useState(false);
   const [isSettingsPanelOpen, setSettingsPanelOpen] = useState(false);
-  const [settingsSection, setSettingsSection] = useState<'prompts' | 'skills' | 'tools'>('prompts');
+  const [settingsSection, setSettingsSection] = useState<'prompts' | 'skills' | 'tools' | 'commands'>('prompts');
 
   useEffect(() => {
     if (chats.length === 0) {
@@ -739,7 +739,7 @@ const App: React.FC = () => {
 
   // Handle sidebar navigation
   const handleSidebarNavigate = (section: SidebarSection) => {
-    if (section === 'skills' || section === 'tools' || section === 'settings') {
+    if (section === 'skills' || section === 'tools' || section === 'commands' || section === 'settings') {
       setSettingsSection(section === 'settings' ? 'prompts' : section);
       setSettingsPanelOpen(true);
     }
@@ -778,6 +778,7 @@ const App: React.FC = () => {
         onSendMessage={handleSendMessage}
         isLoading={hasPendingWork}
         currentUser={currentUser.id}
+        lmStudioStatus={lmStudioStatus}
       />
 
       {/* Model Manager Modal */}
