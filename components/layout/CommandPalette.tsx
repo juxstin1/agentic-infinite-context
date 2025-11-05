@@ -55,7 +55,7 @@ const CommandPalette: React.FC<CommandPaletteProps> = ({
         title: `/${cmd.name}`,
         subtitle: cmd.description,
         icon: <Terminal className="w-4 h-4 text-blue-400" />,
-        keywords: [cmd.name, ...cmd.aliases, ...(cmd.description?.split(' ') || [])],
+        keywords: [cmd.name, ...(cmd.aliases || []), ...(cmd.description?.split(' ') || [])],
         action: () => {
           onExecuteCommand?.(`/${cmd.name}`);
           addToRecent(`/${cmd.name}`);
