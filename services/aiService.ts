@@ -4,6 +4,7 @@ import crypto from "crypto-js";
 export interface AiResult {
   response: string;
   extractedFact?: MemoryFact;
+  extractedFacts?: MemoryFact[];
   toolCall?: ToolCall;
 }
 

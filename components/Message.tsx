@@ -1,5 +1,5 @@
-import React from 'react';
-import { Message, Role, User } from '../types';
+import React, { useState } from 'react';
+import { Message, Role, User, ToolCall } from '../types';
 import { WrenchIcon } from './Icons';
 import { ASSISTANT_USER } from '../constants';
 
@@ -7,6 +7,8 @@ interface MessageProps {
   message: Message;
   currentUserId: string;
   participants: User[];
+  onExecuteTool?: (toolCall: ToolCall, messageId: string) => Promise<void>;
+  onFeedback?: (messageId: string, thumbsUp: boolean) => void;
 }
 
 const Avatar: React.FC<{ senderId: string; participants: User[] }> = ({ senderId, participants }) => {
@@ -21,8 +23,28 @@ const Avatar: React.FC<{ senderId: string; participants: User[] }> = ({ senderId
   );
 };
 
-const ToolMessage: React.FC<{ message: Message }> = ({ message }) => {
+const ToolMessage: React.FC<{
+  message: Message;
+  onExecute?: (toolCall: ToolCall, messageId: string) => Promise<void>;
+}> = ({ message, onExecute }) => {
+  const [isExecuting, setIsExecuting] = useState(false);
+  const [isExecuted, setIsExecuted] = useState(false);
+
   if (!message.toolCall) return null;
+
+  const handleExecute = async () => {
+    if (!onExecute || isExecuting || isExecuted) return;
+    setIsExecuting(true);
+    try {
+      await onExecute(message.toolCall!, message.id);
+      setIsExecuted(true);
+    } catch (error) {
+      console.error('Tool execution failed:', error);
+    } finally {
+      setIsExecuting(false);
+    }
+  };
+
   return (
     <div className="flex items-start gap-4">
       <div className="w-8 h-8 bg-amber-500 rounded-full flex items-center justify-center flex-shrink-0">
@@ -41,27 +63,68 @@ const ToolMessage: React.FC<{ message: Message }> = ({ message }) => {
           </pre>
         </div>
         <div className="mt-2 flex gap-2">
-          <button className="px-3 py-1 text-xs bg-green-600 hover:bg-green-700 rounded text-white transition-colors">Execute</button>
-          <button className="px-3 py-1 text-xs bg-slate-600 hover:bg-slate-700 rounded text-white transition-colors">Dismiss</button>
+          <button
+            onClick={handleExecute}
+            disabled={isExecuting || isExecuted}
+            className={`px-3 py-1 text-xs rounded text-white transition-colors ${
+              isExecuted
+                ? 'bg-gray-600 cursor-not-allowed'
+                : isExecuting
+                ? 'bg-green-700 cursor-wait'
+                : 'bg-green-600 hover:bg-green-700'
+            }`}
+          >
+            {isExecuted ? 'Executed' : isExecuting ? 'Executing...' : 'Execute'}
+          </button>
+          <button
+            className="px-3 py-1 text-xs bg-slate-600 hover:bg-slate-700 rounded text-white transition-colors"
+            disabled={isExecuting}
+          >
+            Dismiss
+          </button>
         </div>
       </div>
     </div>
   );
 };
 
-const MessageComponent: React.FC<MessageProps> = ({ message, currentUserId, participants }) => {
+const SystemMessage: React.FC<{ message: Message }> = ({ message }) => {
+  return (
+    <div className="flex justify-center my-4">
+      <div className="max-w-2xl px-4 py-3 bg-amber-500/10 border border-amber-500/30 rounded-lg">
+        <div className="flex items-center gap-2">
+          <div className="w-1.5 h-1.5 bg-amber-400 rounded-full"></div>
+          <p className="text-sm text-amber-200/90">{message.content}</p>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const MessageComponent: React.FC<MessageProps> = ({
+  message,
+  currentUserId,
+  participants,
+  onExecuteTool,
+  onFeedback,
+}) => {
   const isCurrentUser = message.senderId === currentUserId;
   const isAssistant = message.senderId === ASSISTANT_USER.id;
   const isTool = message.role === Role.Tool;
+  const isSystem = message.role === Role.System;
 
   if (isTool) {
-    return <ToolMessage message={message} />;
+    return <ToolMessage message={message} onExecute={onExecuteTool} />;
+  }
+
+  if (isSystem) {
+    return <SystemMessage message={message} />;
   }
 
   const sender = participants.find(p => p.id === message.senderId);
 
   return (
-    <div className={`flex items-start gap-4 ${isCurrentUser ? 'justify-end' : ''}`}>
+    <div className={`group flex items-start gap-4 ${isCurrentUser ? 'justify-end' : ''}`}>
       {!isCurrentUser && <Avatar senderId={message.senderId} participants={participants} />}
 
       <div className="max-w-xl">
@@ -87,6 +150,26 @@ const MessageComponent: React.FC<MessageProps> = ({ message, currentUserId, part
         >
           <p className="whitespace-pre-wrap">{message.content}</p>
         </div>
+
+        {/* Feedback buttons for assistant messages */}
+        {isAssistant && onFeedback && (
+          <div className="mt-2 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+            <button
+              onClick={() => onFeedback(message.id, true)}
+              className="px-2 py-1 text-xs text-green-400 hover:text-green-300 transition-colors"
+              title="Helpful"
+            >
+              👍
+            </button>
+            <button
+              onClick={() => onFeedback(message.id, false)}
+              className="px-2 py-1 text-xs text-red-400 hover:text-red-300 transition-colors"
+              title="Not helpful"
+            >
+              👎
+            </button>
+          </div>
+        )}
       </div>
 
       {isCurrentUser && <Avatar senderId={message.senderId} participants={participants} />}

@@ -7,13 +7,29 @@ interface SidePanelProps {
   onAddFact: (fact: MemoryFact) => Promise<void> | void;
   cacheStats: { hits: number; misses: number };
   cacheSize: number;
+  learningStats?: {
+    totalFacts: number;
+    autoExtractedFacts: number;
+    avgConfidence: number;
+    totalToolExecutions: number;
+    toolSuccessRate: number;
+  };
+  clusterSummary?: Array<{ name: string; count: number; avgConfidence: number }>;
 }
 
-type PanelTab = "memory" | "cache";
+type PanelTab = "memory" | "cache" | "learning";
 
 const createId = () => `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`;
 
-const SidePanel: React.FC<SidePanelProps> = ({ memoryFacts, onDeleteFact, onAddFact, cacheStats, cacheSize }) => {
+const SidePanel: React.FC<SidePanelProps> = ({
+  memoryFacts,
+  onDeleteFact,
+  onAddFact,
+  cacheStats,
+  cacheSize,
+  learningStats,
+  clusterSummary
+}) => {
   const [tab, setTab] = useState<PanelTab>("memory");
   const [factText, setFactText] = useState("");
   const [factKind, setFactKind] = useState<MemoryFact["kind"]>("profile");
@@ -41,7 +57,7 @@ const SidePanel: React.FC<SidePanelProps> = ({ memoryFacts, onDeleteFact, onAddF
         <button
           type="button"
           onClick={() => setTab("memory")}
-          className={`flex-1 px-3 py-2 text-sm font-medium border-b ${
+          className={`flex-1 px-2 py-2 text-xs font-medium border-b ${
             tab === "memory" ? "border-purple-500 text-purple-200" : "border-transparent text-slate-400"
           }`}
         >
@@ -50,11 +66,20 @@ const SidePanel: React.FC<SidePanelProps> = ({ memoryFacts, onDeleteFact, onAddF
         <button
           type="button"
           onClick={() => setTab("cache")}
-          className={`flex-1 px-3 py-2 text-sm font-medium border-b ${
+          className={`flex-1 px-2 py-2 text-xs font-medium border-b ${
             tab === "cache" ? "border-purple-500 text-purple-200" : "border-transparent text-slate-400"
           }`}
         >
           Cache
+        </button>
+        <button
+          type="button"
+          onClick={() => setTab("learning")}
+          className={`flex-1 px-2 py-2 text-xs font-medium border-b ${
+            tab === "learning" ? "border-purple-500 text-purple-200" : "border-transparent text-slate-400"
+          }`}
+        >
+          Learning
         </button>
       </div>
 
@@ -113,7 +138,7 @@ const SidePanel: React.FC<SidePanelProps> = ({ memoryFacts, onDeleteFact, onAddF
             ))}
           </div>
         </div>
-      ) : (
+      ) : tab === "cache" ? (
         <div className="flex-1 p-4 space-y-4 text-sm text-slate-200">
           <div className="grid grid-cols-2 gap-3">
             <div className="rounded-lg border border-slate-800 bg-slate-900/70 p-3 text-center">
@@ -136,6 +161,82 @@ const SidePanel: React.FC<SidePanelProps> = ({ memoryFacts, onDeleteFact, onAddF
           <p className="text-xs text-slate-500">
             Responses are cached per model for faster repeats. Hit rate is calculated on this session only.
           </p>
+        </div>
+      ) : (
+        <div className="flex-1 p-4 space-y-4 overflow-y-auto">
+          <div className="space-y-3">
+            <h3 className="text-sm font-semibold text-purple-300">📊 Learning Progress</h3>
+
+            {learningStats ? (
+              <>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="rounded-lg border border-slate-800 bg-slate-900/70 p-3 text-center">
+                    <div className="text-2xl font-semibold text-purple-400">{learningStats.totalFacts}</div>
+                    <div className="text-xs text-slate-400">Total Facts</div>
+                  </div>
+                  <div className="rounded-lg border border-slate-800 bg-slate-900/70 p-3 text-center">
+                    <div className="text-2xl font-semibold text-green-400">{learningStats.autoExtractedFacts}</div>
+                    <div className="text-xs text-slate-400">Auto-Extracted</div>
+                  </div>
+                  <div className="rounded-lg border border-slate-800 bg-slate-900/70 p-3 text-center">
+                    <div className="text-2xl font-semibold text-blue-400">
+                      {(learningStats.avgConfidence * 100).toFixed(0)}%
+                    </div>
+                    <div className="text-xs text-slate-400">Avg Confidence</div>
+                  </div>
+                  <div className="rounded-lg border border-slate-800 bg-slate-900/70 p-3 text-center">
+                    <div className="text-2xl font-semibold text-amber-400">{learningStats.totalToolExecutions}</div>
+                    <div className="text-xs text-slate-400">Tool Uses</div>
+                  </div>
+                </div>
+
+                <div className="rounded-lg border border-slate-800 bg-slate-900/70 p-3">
+                  <div className="flex justify-between items-center mb-2">
+                    <span className="text-xs text-slate-400">Tool Success Rate</span>
+                    <span className="text-sm font-semibold text-green-400">
+                      {(learningStats.toolSuccessRate * 100).toFixed(1)}%
+                    </span>
+                  </div>
+                  <div className="w-full bg-slate-800 rounded-full h-2">
+                    <div
+                      className="bg-green-500 h-2 rounded-full transition-all"
+                      style={{ width: `${learningStats.toolSuccessRate * 100}%` }}
+                    ></div>
+                  </div>
+                </div>
+
+                {clusterSummary && clusterSummary.length > 0 && (
+                  <div className="space-y-2">
+                    <h4 className="text-xs font-semibold text-slate-300">📁 Fact Clusters</h4>
+                    {clusterSummary.map(cluster => (
+                      <div key={cluster.name} className="rounded border border-slate-800 bg-slate-900/70 p-2">
+                        <div className="flex justify-between items-center">
+                          <span className="text-xs text-slate-200">{cluster.name}</span>
+                          <span className="text-xs text-slate-400">{cluster.count} facts</span>
+                        </div>
+                        <div className="text-[10px] text-slate-500 mt-1">
+                          Confidence: {(cluster.avgConfidence * 100).toFixed(0)}%
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                <div className="rounded-lg border border-green-900/50 bg-green-950/30 p-3">
+                  <div className="text-xs text-green-300 font-semibold mb-1">🧠 Recursive Learning Active</div>
+                  <div className="text-[10px] text-green-400/70">
+                    {learningStats.autoExtractedFacts > 0
+                      ? `The AI has auto-learned ${learningStats.autoExtractedFacts} facts from conversations. Keep chatting to improve its knowledge!`
+                      : 'Start chatting to enable auto-fact extraction and learning.'}
+                  </div>
+                </div>
+              </>
+            ) : (
+              <div className="text-sm text-slate-500">
+                Learning stats will appear here once you start chatting.
+              </div>
+            )}
+          </div>
         </div>
       )}
     </aside>

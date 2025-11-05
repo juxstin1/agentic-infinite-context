@@ -18,6 +18,7 @@ import {
 import { getMockAiResponse, streamChatCompletion } from "./services/aiService";
 import { useLocalDB } from "./hooks/useLocalDB";
 import { useModelManager } from "./hooks/useModelManager";
+import { RecursiveLearningEngine } from "./services/recursiveLearningEngine";
 import crypto from "crypto-js";
 import {
   USERS,
@@ -109,18 +110,102 @@ const App: React.FC = () => {
     messages,
     memoryFacts,
     cache,
+    toolMemories,
     activeChatId,
     setActiveChatId,
     addMessage,
     addFact,
     deleteFact,
+    updateFact,
+    addToolMemory,
+    addFeedback,
     getCacheEntry,
     setCacheEntry,
     createChat,
     findRelevantFacts,
     embeddingStatus,
     dbStatus,
+    setMemoryFacts,
+    setToolMemories,
   } = useLocalDB();
+
+  // Initialize recursive learning engine
+  const learningEngineRef = useRef<RecursiveLearningEngine | null>(null);
+
+  useEffect(() => {
+    if (!learningEngineRef.current) {
+      learningEngineRef.current = new RecursiveLearningEngine();
+    }
+    learningEngineRef.current.initialize(memoryFacts, toolMemories);
+  }, [memoryFacts, toolMemories]);
+
+  // Sync learning engine changes back to localStorage
+  const syncLearningEngine = useCallback(() => {
+    if (learningEngineRef.current) {
+      setMemoryFacts(learningEngineRef.current.getFacts());
+      setToolMemories(learningEngineRef.current.getToolMemories());
+    }
+  }, [setMemoryFacts, setToolMemories]);
+
+  // Handle tool execution
+  const handleExecuteTool = useCallback(
+    async (toolCall: any, messageId: string) => {
+      if (!learningEngineRef.current || !activeChatId) return;
+
+      const toolEngine = learningEngineRef.current.getToolEngine();
+      const result = await toolEngine.executeTool(
+        toolCall.name,
+        toolCall.args,
+        `Executed from message ${messageId}`
+      );
+
+      // Add result as a system message
+      const resultMessage: Message = {
+        id: crypto.lib.WordArray.random(16).toString(),
+        chat_id: activeChatId,
+        role: Role.System,
+        senderId: "system",
+        senderName: "System",
+        content: result.success
+          ? `✓ Tool "${toolCall.name}" executed successfully:\n${result.output}`
+          : `✗ Tool "${toolCall.name}" failed:\n${result.error}`,
+        modelId: "system",
+        modelLabel: "System",
+        created_at: new Date().toISOString(),
+      };
+
+      addMessage(resultMessage);
+      syncLearningEngine();
+    },
+    [activeChatId, addMessage, syncLearningEngine]
+  );
+
+  // Handle user feedback
+  const handleFeedback = useCallback(
+    (messageId: string, thumbsUp: boolean) => {
+      if (!learningEngineRef.current) return;
+
+      const feedback = {
+        message_id: messageId,
+        thumbs_up: thumbsUp,
+        thumbs_down: !thumbsUp,
+        created_at: new Date().toISOString(),
+      };
+
+      learningEngineRef.current.recordFeedback(feedback);
+      addFeedback(feedback);
+
+      // Reinforce facts if positive feedback
+      if (thumbsUp) {
+        const message = messages.find(m => m.id === messageId);
+        if (message) {
+          // This is a simple implementation - could be enhanced to track which facts were used
+          console.log('Positive feedback recorded for message:', message.id);
+        }
+      }
+    },
+    [addFeedback, messages]
+  );
 
   const { builtinModels, mergeWithBase, addModel, updateModel, removeModel } = useModelManager();
 
@@ -264,12 +349,12 @@ const App: React.FC = () => {
         const moderatorMessage: Message = {
           id: crypto.lib.WordArray.random(16).toString(),
           chat_id: activeChatIdValue,
-          role: Role.Assistant,
+          role: Role.System,
           senderId: "moderator",
-          senderName: "Moderator",
-          content: `[Moderator]: The model ${modelLabel} is missing an endpoint. Open Manage models to configure it.`,
+          senderName: "System",
+          content: `The model ${modelLabel} is missing an endpoint. Open Manage models to configure it.`,
           modelId: "moderator",
-          modelLabel: "Moderator",
+          modelLabel: "System",
           created_at: new Date().toISOString(),
         };
         addMessage(moderatorMessage);
@@ -390,12 +475,12 @@ const App: React.FC = () => {
           const moderatorMessage: Message = {
             id: crypto.lib.WordArray.random(16).toString(),
             chat_id: activeChatIdValue,
-            role: Role.Assistant,
+            role: Role.System,
             senderId: "moderator",
-            senderName: "Moderator",
-            content: `[Moderator]: Temporary identity issue; try addressing @${normalizeHandle(modelLabel)} directly.`,
+            senderName: "System",
+            content: `Identity validation failed for ${modelLabel}. Try mentioning @${normalizeHandle(modelLabel)} directly in your message.`,
             modelId: "moderator",
-            modelLabel: "Moderator",
+            modelLabel: "System",
             created_at: new Date().toISOString(),
           };
 
@@ -409,13 +494,16 @@ const App: React.FC = () => {
           return next;
         });
 
+        // Strip the identity prefix after validation
+        const cleanContent = trimmed.replace(/^\[.*?\]:\s*/, '').trim();
+
         const assistantMessage: Message = {
           id: crypto.lib.WordArray.random(16).toString(),
           chat_id: activeChatIdValue,
           role: Role.Assistant,
           senderId: ASSISTANT_USER.id,
           senderName: `${ASSISTANT_USER.name} (${modelLabel})`,
-          content: trimmed,
+          content: cleanContent,
           modelId: modelConfig.id,
           modelLabel,
           created_at: new Date().toISOString(),
@@ -481,7 +569,10 @@ const App: React.FC = () => {
       const threadSummary = buildThreadSummary(updatedHistory);
       const contextWindow = updatedHistory.slice(-20);
 
-      const relevantFacts = await findRelevantFacts(normalizedPrompt);
+      // Use semantic search from learning engine instead of keyword search
+      const relevantFacts = learningEngineRef.current
+        ? learningEngineRef.current.findRelevantFacts(normalizedPrompt, 6)
+        : await findRelevantFacts(normalizedPrompt);
       const activeChat = chats.find(chat => chat.id === activeChatId) ?? null;
 
       const mentioned = extractMentionedAgentIds(trimmedContent, availableModels);
@@ -537,13 +628,16 @@ const App: React.FC = () => {
               modelConfig.useRag === false ? [] : relevantFacts,
             );
 
+            // Strip identity prefix if present in mock response
+            const cleanResponse = aiResult.response.replace(/^\[.*?\]:\s*/, '').trim();
+
             const assistantMessage: Message = {
               id: crypto.lib.WordArray.random(16).toString(),
               chat_id: activeChatId,
               role: Role.Assistant,
               senderId: ASSISTANT_USER.id,
               senderName: `${ASSISTANT_USER.name} (${modelConfig.label})`,
-              content: aiResult.response,
+              content: cleanResponse,
               modelId: modelConfig.id,
               modelLabel: modelConfig.label,
               created_at: new Date().toISOString(),
@@ -554,6 +648,19 @@ const App: React.FC = () => {
               ...assistantMessage,
               id: crypto.lib.WordArray.random(16).toString(),
             });
+
+            // Auto-extract facts from the conversation
+            if (learningEngineRef.current) {
+              const extractedFacts = await learningEngineRef.current.extractFactsFromConversation(
+                userMessage,
+                assistantMessage,
+                currentUser
+              );
+              extractedFacts.forEach(fact => learningEngineRef.current!.addFact(fact));
+              if (extractedFacts.length > 0) {
+                syncLearningEngine();
+              }
+            }
 
             if (aiResult.extractedFact) {
               await addFact(aiResult.extractedFact);
@@ -613,11 +720,16 @@ const App: React.FC = () => {
       selectedModels,
       setCacheEntry,
       startStream,
+      syncLearningEngine,
     ],
   );
 
   const activeMessages = messages.filter(message => message.chat_id === activeChatId);
   const activeChat = chats.find(chat => chat.id === activeChatId) ?? null;
+
+  // Get learning stats for UI
+  const learningStats = learningEngineRef.current?.getStats();
+  const clusterSummary = learningEngineRef.current?.getClusterSummary();
 
   return (
     <div className="flex h-screen w-screen font-sans bg-slate-900 text-slate-200 overflow-hidden">
@@ -651,6 +763,8 @@ const App: React.FC = () => {
             participants={activeChat?.participants ?? []}
             streamingResponses={Object.values(activeStreams)}
             routedAgents={lastRoutedAgents}
+            onExecuteTool={handleExecuteTool}
+            onFeedback={handleFeedback}
           />
         </div>
         <InputBar
@@ -667,6 +781,8 @@ const App: React.FC = () => {
         onAddFact={addFact}
         cacheStats={cacheStats}
         cacheSize={Object.keys(cache).length}
+        learningStats={learningStats}
+        clusterSummary={clusterSummary}
       />
 
       {isModelManagerOpen && (
