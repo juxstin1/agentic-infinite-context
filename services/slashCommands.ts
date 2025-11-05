@@ -277,3 +277,6 @@ export const builtinCommands: SlashCommand[] = [
 
 export const defaultRegistry = new SlashCommandRegistry();
 builtinCommands.forEach(cmd => defaultRegistry.register(cmd));
+
+// Export singleton instance
+export const slashCommandsManager = defaultRegistry;

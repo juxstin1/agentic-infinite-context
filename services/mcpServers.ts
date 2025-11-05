@@ -302,3 +302,4 @@ export class MCPServerManager {
 }
 
 export const mcpServerManager = new MCPServerManager();
+export const mcpServersManager = mcpServerManager; // Alias for consistency
