@@ -60,6 +60,10 @@ export class SlashCommandRegistry {
     });
   }
 
+  getAllCommands(): SlashCommand[] {
+    return this.getAll();
+  }
+
   async execute(input: string, context: CommandContext): Promise<CommandResult | null> {
     const match = input.match(/^\/(\w+)(?:\s+(.*))?$/);
     if (!match) return null;

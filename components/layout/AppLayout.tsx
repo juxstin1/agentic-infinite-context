@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import Sidebar from './Sidebar';
+import Sidebar, { SidebarSection } from './Sidebar';
 import CommandPalette from './CommandPalette';
 import { cn } from '../../design-system/utils';
 
@@ -11,6 +11,7 @@ interface AppLayoutProps {
   showSidebar?: boolean;
   showRightPanel?: boolean;
   onExecuteCommand?: (command: string, args?: any) => void;
+  onSidebarNavigate?: (section: SidebarSection) => void;
 }
 
 const AppLayout: React.FC<AppLayoutProps> = ({
@@ -20,6 +21,7 @@ const AppLayout: React.FC<AppLayoutProps> = ({
   showSidebar = true,
   showRightPanel = false,
   onExecuteCommand,
+  onSidebarNavigate,
 }) => {
   const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
   const [isSidebarVisible, setIsSidebarVisible] = useState(showSidebar);
@@ -92,7 +94,7 @@ const AppLayout: React.FC<AppLayoutProps> = ({
               transition={{ type: 'spring', stiffness: 400, damping: 30 }}
               className="flex-shrink-0"
             >
-              {sidebar || <Sidebar />}
+              {sidebar || <Sidebar onNavigate={onSidebarNavigate} />}
             </motion.div>
           )}
         </AnimatePresence>

@@ -169,6 +169,10 @@ export class MCPServerManager {
     return Array.from(this.servers.values());
   }
 
+  getAllServers(): MCPServer[] {
+    return this.getServers();
+  }
+
   /**
    * Get a specific server
    */
