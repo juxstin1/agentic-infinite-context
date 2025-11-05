@@ -1,10 +1,12 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import Header from "./components/Header";
 import ChatWindow from "./components/ChatWindow";
+import EnhancedChatWindow from "./components/chat/EnhancedChatWindow";
 import InputBar from "./components/InputBar";
 import SidePanel from "./components/SidePanel";
 import ChatListPanel from "./components/ChatListPanel";
 import ModelManagerModal from "./components/ModelManagerModal";
+import AppLayout from "./components/layout/AppLayout";
 import {
   Message,
   Model,
@@ -732,59 +734,39 @@ const App: React.FC = () => {
   const clusterSummary = learningEngineRef.current?.getClusterSummary();
 
   return (
-    <div className="flex h-screen w-screen font-sans bg-slate-900 text-slate-200 overflow-hidden">
-      <ChatListPanel
-        chats={chats}
-        activeChatId={activeChatId}
-        onSelectChat={setActiveChatId}
-        onCreateChat={() => {
-          const newChat = createChat("New Group Chat", USERS);
-          setActiveChatId(newChat.id);
-        }}
-      />
-      <main className="flex-1 flex flex-col h-full bg-slate-800/50">
-        <Header
-          chat={activeChat}
-          isOffline={isOffline}
-          setIsOffline={setIsOffline}
-          embeddingStatus={embeddingStatus}
-          dbStatus={dbStatus}
-          lmStudioStatus={lmStudioStatus}
-          modelOptions={availableModels}
-          selectedModels={selectedModels}
-          onSelectModels={setSelectedModels}
-          onOpenModelManager={() => setModelManagerOpen(true)}
+    <AppLayout
+      onExecuteCommand={(command) => {
+        // Handle slash commands from command palette
+        if (command.startsWith('/')) {
+          // Future: integrate with slashCommandsManager
+          console.log('Command:', command);
+        } else {
+          // Send as regular message
+          handleSendMessage(command);
+        }
+      }}
+      rightPanel={
+        <SidePanel
+          memoryFacts={memoryFacts}
+          onDeleteFact={deleteFact}
+          onAddFact={addFact}
+          cacheStats={cacheStats}
+          cacheSize={Object.keys(cache).length}
+          learningStats={learningStats}
+          clusterSummary={clusterSummary}
         />
-        <div className="flex-1 overflow-hidden">
-          <ChatWindow
-            messages={activeMessages}
-            isThinking={hasPendingWork}
-            currentUserId={currentUser.id}
-            participants={activeChat?.participants ?? []}
-            streamingResponses={Object.values(activeStreams)}
-            routedAgents={lastRoutedAgents}
-            onExecuteTool={handleExecuteTool}
-            onFeedback={handleFeedback}
-          />
-        </div>
-        <InputBar
-          onSendMessage={handleSendMessage}
-          disabled={hasPendingWork || embeddingStatus !== "ready" || dbStatus !== "ready"}
-          currentUser={currentUser}
-          setCurrentUser={setCurrentUser}
-          users={USERS}
-        />
-      </main>
-      <SidePanel
-        memoryFacts={memoryFacts}
-        onDeleteFact={deleteFact}
-        onAddFact={addFact}
-        cacheStats={cacheStats}
-        cacheSize={Object.keys(cache).length}
-        learningStats={learningStats}
-        clusterSummary={clusterSummary}
+      }
+      showRightPanel={true}
+    >
+      {/* Main Chat Interface */}
+      <EnhancedChatWindow
+        messages={activeMessages}
+        onSendMessage={handleSendMessage}
+        isLoading={hasPendingWork}
+        currentUser={currentUser.id}
       />
 
+      {/* Model Manager Modal */}
       {isModelManagerOpen && (
         <ModelManagerModal
           models={sortModelsForDisplay(mergedModels)}
@@ -800,7 +782,7 @@ const App: React.FC = () => {
           onClose={() => setModelManagerOpen(false)}
         />
       )}
-    </div>
+    </AppLayout>
   );
 };
 

@@ -2,6 +2,8 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './App';
+import { ThemeProvider } from './contexts/ThemeContext';
+import { WorkspaceProvider } from './contexts/WorkspaceContext';
 
 class ErrorBoundary extends React.Component<{children: React.ReactNode}, {hasError: boolean}> {
   constructor(props: {children: React.ReactNode}) {
@@ -47,7 +49,11 @@ const root = ReactDOM.createRoot(rootElement);
 root.render(
   <React.StrictMode>
     <ErrorBoundary>
-      <App />
+      <ThemeProvider>
+        <WorkspaceProvider>
+          <App />
+        </WorkspaceProvider>
+      </ThemeProvider>
     </ErrorBoundary>
   </React.StrictMode>
 );
