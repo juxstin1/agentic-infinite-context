@@ -20,6 +20,7 @@ import Badge from '../ui/Badge';
 
 interface SidebarProps {
   className?: string;
+  onNavigate?: (section: SidebarSection) => void;
 }
 
 export type SidebarSection =
@@ -31,7 +32,7 @@ export type SidebarSection =
   | 'tools'
   | 'settings';
 
-const Sidebar: React.FC<SidebarProps> = ({ className }) => {
+const Sidebar: React.FC<SidebarProps> = ({ className, onNavigate }) => {
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [activeSection, setActiveSection] = useState<SidebarSection>('chat');
   const { workspaces, activeWorkspace, switchWorkspace, createWorkspace } = useWorkspace();
@@ -158,7 +159,10 @@ const Sidebar: React.FC<SidebarProps> = ({ className }) => {
             return (
               <motion.button
                 key={section.id}
-                onClick={() => setActiveSection(section.id)}
+                onClick={() => {
+                  setActiveSection(section.id);
+                  onNavigate?.(section.id);
+                }}
                 className={cn(
                   'w-full flex items-center gap-3 px-3 py-2.5 rounded-xl',
                   'transition-all duration-200',

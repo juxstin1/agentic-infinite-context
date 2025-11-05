@@ -7,6 +7,8 @@ import SidePanel from "./components/SidePanel";
 import ChatListPanel from "./components/ChatListPanel";
 import ModelManagerModal from "./components/ModelManagerModal";
 import AppLayout from "./components/layout/AppLayout";
+import SettingsPanel from "./components/layout/SettingsPanel";
+import type { SidebarSection } from "./components/layout/Sidebar";
 import {
   Message,
   Model,
@@ -224,6 +226,8 @@ const App: React.FC = () => {
   const pendingOfflineCount = useRef(0);
   const [hasPendingWork, setHasPendingWork] = useState(false);
   const [isModelManagerOpen, setModelManagerOpen] = useState(false);
+  const [isSettingsPanelOpen, setSettingsPanelOpen] = useState(false);
+  const [settingsSection, setSettingsSection] = useState<'prompts' | 'skills' | 'tools'>('prompts');
 
   useEffect(() => {
     if (chats.length === 0) {
@@ -733,6 +737,15 @@ const App: React.FC = () => {
   const learningStats = learningEngineRef.current?.getStats();
   const clusterSummary = learningEngineRef.current?.getClusterSummary();
 
+  // Handle sidebar navigation
+  const handleSidebarNavigate = (section: SidebarSection) => {
+    if (section === 'skills' || section === 'tools' || section === 'settings') {
+      setSettingsSection(section === 'settings' ? 'prompts' : section);
+      setSettingsPanelOpen(true);
+    }
+    // Other sections like 'chat', 'home', 'workspaces' could be handled here
+  };
+
   return (
     <AppLayout
       onExecuteCommand={(command) => {
@@ -745,6 +758,7 @@ const App: React.FC = () => {
           handleSendMessage(command);
         }
       }}
+      onSidebarNavigate={handleSidebarNavigate}
       rightPanel={
         <SidePanel
           memoryFacts={memoryFacts}
@@ -782,6 +796,13 @@ const App: React.FC = () => {
           onClose={() => setModelManagerOpen(false)}
         />
       )}
+
+      {/* Settings Panel */}
+      <SettingsPanel
+        isOpen={isSettingsPanelOpen}
+        onClose={() => setSettingsPanelOpen(false)}
+        initialSection={settingsSection}
+      />
     </AppLayout>
   );
 };
