@@ -49,13 +49,31 @@ const ToolMessage: React.FC<{ message: Message }> = ({ message }) => {
   );
 };
 
+const SystemMessage: React.FC<{ message: Message }> = ({ message }) => {
+  return (
+    <div className="flex justify-center my-4">
+      <div className="max-w-2xl px-4 py-3 bg-amber-500/10 border border-amber-500/30 rounded-lg">
+        <div className="flex items-center gap-2">
+          <div className="w-1.5 h-1.5 bg-amber-400 rounded-full"></div>
+          <p className="text-sm text-amber-200/90">{message.content}</p>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 const MessageComponent: React.FC<MessageProps> = ({ message, currentUserId, participants }) => {
   const isCurrentUser = message.senderId === currentUserId;
   const isAssistant = message.senderId === ASSISTANT_USER.id;
   const isTool = message.role === Role.Tool;
+  const isSystem = message.role === Role.System;
 
   if (isTool) {
     return <ToolMessage message={message} />;
+  }
+
+  if (isSystem) {
+    return <SystemMessage message={message} />;
   }
 
   const sender = participants.find(p => p.id === message.senderId);

@@ -264,12 +264,12 @@ const App: React.FC = () => {
         const moderatorMessage: Message = {
           id: crypto.lib.WordArray.random(16).toString(),
           chat_id: activeChatIdValue,
-          role: Role.Assistant,
+          role: Role.System,
           senderId: "moderator",
-          senderName: "Moderator",
-          content: `[Moderator]: The model ${modelLabel} is missing an endpoint. Open Manage models to configure it.`,
+          senderName: "System",
+          content: `The model ${modelLabel} is missing an endpoint. Open Manage models to configure it.`,
           modelId: "moderator",
-          modelLabel: "Moderator",
+          modelLabel: "System",
           created_at: new Date().toISOString(),
         };
         addMessage(moderatorMessage);
@@ -390,12 +390,12 @@ const App: React.FC = () => {
           const moderatorMessage: Message = {
             id: crypto.lib.WordArray.random(16).toString(),
             chat_id: activeChatIdValue,
-            role: Role.Assistant,
+            role: Role.System,
             senderId: "moderator",
-            senderName: "Moderator",
-            content: `[Moderator]: Temporary identity issue; try addressing @${normalizeHandle(modelLabel)} directly.`,
+            senderName: "System",
+            content: `Identity validation failed for ${modelLabel}. Try mentioning @${normalizeHandle(modelLabel)} directly in your message.`,
             modelId: "moderator",
-            modelLabel: "Moderator",
+            modelLabel: "System",
             created_at: new Date().toISOString(),
           };
 
@@ -409,13 +409,16 @@ const App: React.FC = () => {
           return next;
         });
 
+        // Strip the identity prefix after validation
+        const cleanContent = trimmed.replace(/^\[.*?\]:\s*/, '').trim();
+
         const assistantMessage: Message = {
           id: crypto.lib.WordArray.random(16).toString(),
           chat_id: activeChatIdValue,
           role: Role.Assistant,
           senderId: ASSISTANT_USER.id,
           senderName: `${ASSISTANT_USER.name} (${modelLabel})`,
-          content: trimmed,
+          content: cleanContent,
           modelId: modelConfig.id,
           modelLabel,
           created_at: new Date().toISOString(),
@@ -537,13 +540,16 @@ const App: React.FC = () => {
               modelConfig.useRag === false ? [] : relevantFacts,
             );
 
+            // Strip identity prefix if present in mock response
+            const cleanResponse = aiResult.response.replace(/^\[.*?\]:\s*/, '').trim();
+
             const assistantMessage: Message = {
               id: crypto.lib.WordArray.random(16).toString(),
               chat_id: activeChatId,
               role: Role.Assistant,
               senderId: ASSISTANT_USER.id,
               senderName: `${ASSISTANT_USER.name} (${modelConfig.label})`,
-              content: aiResult.response,
+              content: cleanResponse,
               modelId: modelConfig.id,
               modelLabel: modelConfig.label,
               created_at: new Date().toISOString(),
