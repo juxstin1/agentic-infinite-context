@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
-import { Chat, Message, MemoryFact, CacheEntry, User } from "../types";
+import { Chat, Message, MemoryFact, CacheEntry, User, ToolMemory, MessageFeedback } from "../types";
 import { USERS } from "../constants";
 
 const createId = () => `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`;
@@ -8,7 +8,9 @@ const STORAGE_KEYS = {
   CHATS: 'agentic-terminal-chats',
   MESSAGES: 'agentic-terminal-messages',
   MEMORY: 'agentic-terminal-memory',
-  CACHE: 'agentic-terminal-cache'
+  CACHE: 'agentic-terminal-cache',
+  TOOL_MEMORIES: 'agentic-terminal-tool-memories',
+  FEEDBACKS: 'agentic-terminal-feedbacks',
 };
 
 export const useLocalDB = () => {
@@ -16,6 +18,8 @@ export const useLocalDB = () => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [memoryFacts, setMemoryFacts] = useState<MemoryFact[]>([]);
   const [cache, setCache] = useState<Record<string, CacheEntry>>({});
+  const [toolMemories, setToolMemories] = useState<ToolMemory[]>([]);
+  const [feedbacks, setFeedbacks] = useState<MessageFeedback[]>([]);
   const [activeChatId, setActiveChatId] = useState<string | null>(null);
   const [embeddingStatus] = useState<"idle" | "loading" | "ready">("ready");
   const [dbStatus] = useState<"idle" | "loading" | "ready">("ready");
@@ -26,15 +30,21 @@ export const useLocalDB = () => {
       try {
         const savedChats = localStorage.getItem(STORAGE_KEYS.CHATS);
         if (savedChats) setChats(JSON.parse(savedChats));
-        
+
         const savedMessages = localStorage.getItem(STORAGE_KEYS.MESSAGES);
         if (savedMessages) setMessages(JSON.parse(savedMessages));
-        
+
         const savedMemory = localStorage.getItem(STORAGE_KEYS.MEMORY);
         if (savedMemory) setMemoryFacts(JSON.parse(savedMemory));
-        
+
         const savedCache = localStorage.getItem(STORAGE_KEYS.CACHE);
         if (savedCache) setCache(JSON.parse(savedCache));
+
+        const savedToolMemories = localStorage.getItem(STORAGE_KEYS.TOOL_MEMORIES);
+        if (savedToolMemories) setToolMemories(JSON.parse(savedToolMemories));
+
+        const savedFeedbacks = localStorage.getItem(STORAGE_KEYS.FEEDBACKS);
+        if (savedFeedbacks) setFeedbacks(JSON.parse(savedFeedbacks));
       } catch (error) {
         console.error('Failed to load persisted data:', error);
         // Clear corrupted data
@@ -42,9 +52,11 @@ export const useLocalDB = () => {
         localStorage.removeItem(STORAGE_KEYS.MESSAGES);
         localStorage.removeItem(STORAGE_KEYS.MEMORY);
         localStorage.removeItem(STORAGE_KEYS.CACHE);
+        localStorage.removeItem(STORAGE_KEYS.TOOL_MEMORIES);
+        localStorage.removeItem(STORAGE_KEYS.FEEDBACKS);
       }
     };
-    
+
     loadPersistedData();
   }, []);
 
@@ -64,6 +76,14 @@ export const useLocalDB = () => {
   useEffect(() => {
     localStorage.setItem(STORAGE_KEYS.CACHE, JSON.stringify(cache));
   }, [cache]);
+
+  useEffect(() => {
+    localStorage.setItem(STORAGE_KEYS.TOOL_MEMORIES, JSON.stringify(toolMemories));
+  }, [toolMemories]);
+
+  useEffect(() => {
+    localStorage.setItem(STORAGE_KEYS.FEEDBACKS, JSON.stringify(feedbacks));
+  }, [feedbacks]);
 
   // Cache cleanup mechanism
   useEffect(() => {
@@ -130,6 +150,40 @@ export const useLocalDB = () => {
 
   const deleteFact = useCallback(async (factId: string) => {
     setMemoryFacts(prev => prev.filter(f => f.id !== factId));
+  }, []);
+
+  const updateFact = useCallback((factId: string, updates: Partial<MemoryFact>) => {
+    setMemoryFacts(prev => {
+      const index = prev.findIndex(f => f.id === factId);
+      if (index === -1) return prev;
+      const updated = [...prev];
+      updated[index] = { ...updated[index], ...updates };
+      return updated;
+    });
+  }, []);
+
+  const addToolMemory = useCallback((memory: ToolMemory) => {
+    setToolMemories(prev => {
+      const index = prev.findIndex(m => m.tool_name === memory.tool_name);
+      if (index >= 0) {
+        const updated = [...prev];
+        updated[index] = memory;
+        return updated;
+      }
+      return [...prev, memory];
+    });
+  }, []);
+
+  const addFeedback = useCallback((feedback: MessageFeedback) => {
+    setFeedbacks(prev => {
+      const index = prev.findIndex(f => f.message_id === feedback.message_id);
+      if (index >= 0) {
+        const updated = [...prev];
+        updated[index] = feedback;
+        return updated;
+      }
+      return [...prev, feedback];
+    });
   }, []);
 
   const getCacheEntry = useCallback((key: string): Message | null => {
@@ -217,12 +271,17 @@ export const useLocalDB = () => {
     messages,
     memoryFacts,
     cache,
+    toolMemories,
+    feedbacks,
     activeChatId,
     setActiveChatId,
     createChat,
     addMessage,
     addFact,
     deleteFact,
+    updateFact,
+    addToolMemory,
+    addFeedback,
     getCacheEntry,
     setCacheEntry,
     findRelevantFacts,
@@ -230,5 +289,7 @@ export const useLocalDB = () => {
     dbStatus,
     activeChatMessages,
     chatParticipants,
+    setMemoryFacts,
+    setToolMemories,
   };
 };

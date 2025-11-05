@@ -65,6 +65,11 @@ export interface MemoryFact {
   first_seen: string;
   last_seen: string;
   source_message_id?: string;
+  // Recursive learning fields
+  usage_count?: number;
+  success_count?: number;
+  confidence?: number;
+  auto_extracted?: boolean;
 }
 
 export interface CacheEntry {
@@ -110,4 +115,40 @@ export interface OutputLine {
   content: string;
   agent?: AgentInfo;
   actionableCode?: string;
+}
+
+export interface ToolResult {
+  success: boolean;
+  output: string;
+  error?: string;
+  metadata?: Record<string, any>;
+}
+
+export interface ToolExecutor {
+  name: string;
+  description: string;
+  execute: (args: Record<string, any>) => Promise<ToolResult>;
+  validate?: (args: Record<string, any>) => boolean;
+}
+
+export interface ToolMemory {
+  id: string;
+  tool_name: string;
+  context_pattern: string;
+  success_count: number;
+  failure_count: number;
+  total_executions: number;
+  common_args: Record<string, any>;
+  failure_modes: string[];
+  last_used: string;
+  created_at: string;
+}
+
+export interface MessageFeedback {
+  message_id: string;
+  thumbs_up?: boolean;
+  thumbs_down?: boolean;
+  correction?: string;
+  ignored?: boolean;
+  created_at: string;
 }

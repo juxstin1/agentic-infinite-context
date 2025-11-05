@@ -11,6 +11,7 @@
   "dependencies": {
     "@google/genai": "^1.28.0",
     "crypto-js": "^4.2.0",
+    "natural": "^8.1.0",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
     "react-markdown": "9",

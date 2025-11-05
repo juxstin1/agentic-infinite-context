@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from "react";
-import { Message, User, StreamingResponse } from "../types";
+import { Message, User, StreamingResponse, ToolCall } from "../types";
 import MessageComponent from "./Message";
 import { ASSISTANT_USER } from "../constants";
 
@@ -10,6 +10,8 @@ interface ChatWindowProps {
   participants: User[];
   streamingResponses: StreamingResponse[];
   routedAgents: string[];
+  onExecuteTool?: (toolCall: ToolCall, messageId: string) => Promise<void>;
+  onFeedback?: (messageId: string, thumbsUp: boolean) => void;
 }
 
 const StreamingBubble: React.FC<{ response: StreamingResponse }> = ({ response }) => {
@@ -55,6 +57,8 @@ const ChatWindow: React.FC<ChatWindowProps> = ({
   participants,
   streamingResponses,
   routedAgents,
+  onExecuteTool,
+  onFeedback,
 }) => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -82,6 +86,8 @@ const ChatWindow: React.FC<ChatWindowProps> = ({
           message={msg}
           currentUserId={currentUserId}
           participants={participants}
+          onExecuteTool={onExecuteTool}
+          onFeedback={onFeedback}
         />
       ))}
 
