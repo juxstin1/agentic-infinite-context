@@ -1,0 +1,5 @@
+{
+  "name": "Agentic Infinite Context",
+  "description": "An offline-first multi-agent conductor that keeps local models aligned with infinite context windows, deterministic routing, and persona guardrails.",
+  "requestFramePermissions": []
+}
