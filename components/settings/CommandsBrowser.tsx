@@ -2,7 +2,7 @@ import React, { useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { Terminal, Sparkles, Search } from 'lucide-react';
 import { cn } from '../../design-system/utils';
-import { slashCommandsManager } from '../../services/slashCommands';
+import { commandService } from '../../services/CommandService';
 import Card from '../ui/Card';
 import Badge from '../ui/Badge';
 import Input from '../ui/Input';
@@ -15,7 +15,7 @@ const CommandsBrowser: React.FC<CommandsBrowserProps> = ({ className }) => {
   const [searchQuery, setSearchQuery] = React.useState('');
 
   const commands = useMemo(() => {
-    return slashCommandsManager.getAllCommands();
+    return commandService.getCommandsByType('slash');
   }, []);
 
   const filteredCommands = useMemo(() => {
@@ -110,12 +110,12 @@ const CommandsBrowser: React.FC<CommandsBrowserProps> = ({ className }) => {
                       {command.description}
                     </p>
 
-                    {command.parameters && command.parameters.length > 0 && (
+                    {(command as any).parameters && (command as any).parameters.length > 0 && (
                       <div className="space-y-1">
                         <div className="text-xs font-semibold text-neutral-500 uppercase">
                           Parameters
                         </div>
-                        {command.parameters.map(param => (
+                        {(command as any).parameters.map((param: any) => (
                           <div key={param.name} className="flex items-center gap-2 text-xs">
                             <code className="text-primary-400">{param.name}</code>
                             <Badge variant="secondary" size="sm">
