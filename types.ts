@@ -39,6 +39,7 @@ export interface ToolCall {
 export interface Message {
   id: string;
   chat_id: string;
+  chatId?: string; // Alias for chat_id
   role: Role;
   senderId: string;
   senderName: string;
@@ -47,12 +48,16 @@ export interface Message {
   modelLabel?: string;
   toolCall?: ToolCall;
   created_at: string;
+  timestamp?: string; // Alias for created_at
 }
 
 export interface Chat {
   id: string;
   created_at: string;
+  updated_at: string;
   title: string;
+  name?: string; // Alias for title
+  workspaceId?: string; // Workspace scoping
   participants: User[];
 }
 

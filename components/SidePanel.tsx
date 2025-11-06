@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { MemoryFact } from "../types";
+import { createId } from "../utils/ids";
 
 interface SidePanelProps {
   memoryFacts: MemoryFact[];
@@ -18,8 +19,6 @@ interface SidePanelProps {
 }
 
 type PanelTab = "memory" | "cache" | "learning";
-
-const createId = () => `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`;
 
 const SidePanel: React.FC<SidePanelProps> = ({
   memoryFacts,
