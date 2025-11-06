@@ -12,8 +12,7 @@ import {
 } from 'lucide-react';
 import { cn } from '../../design-system/utils';
 import { useWorkspace } from '../../contexts/WorkspaceContext';
-import { slashCommandsManager } from '../../services/slashCommands';
-import { skillFilesManager } from '../../services/skillFiles';
+import { commandService } from '../../services/CommandService';
 
 interface CommandPaletteProps {
   isOpen: boolean;
@@ -47,7 +46,7 @@ const CommandPalette: React.FC<CommandPaletteProps> = ({
     const items: CommandItem[] = [];
 
     // Add slash commands
-    const commands = slashCommandsManager.getAllCommands();
+    const commands = commandService.getCommandsByType('slash');
     commands.forEach(cmd => {
       items.push({
         id: `cmd-${cmd.name}`,
@@ -65,15 +64,16 @@ const CommandPalette: React.FC<CommandPaletteProps> = ({
     });
 
     // Add skills
-    const skills = skillFilesManager.getAllSkills();
+    const skills = commandService.getCommandsByType('skill');
     skills.forEach(skill => {
+      const skillKeywords = (skill as any).keywords || [];
       items.push({
         id: `skill-${skill.id}`,
         type: 'skill',
         title: skill.name,
         subtitle: skill.description,
         icon: <Zap className="w-4 h-4 text-purple-400" />,
-        keywords: [skill.name, ...skill.keywords, skill.category],
+        keywords: [skill.name, ...skillKeywords, skill.category || ''],
         action: () => {
           onExecuteCommand?.(`Use ${skill.name} skill`);
           addToRecent(skill.name);

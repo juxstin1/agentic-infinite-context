@@ -66,9 +66,8 @@ const AppLayout: React.FC<AppLayoutProps> = ({
   }, []);
 
   return (
-    <div className="relative w-full h-screen overflow-hidden bg-neutral-950">
-      {/* Background gradient */}
-      <div className="absolute inset-0 bg-gradient-to-br from-neutral-950 via-neutral-900 to-neutral-950 opacity-50" />
+    <div className="bg-app animate-gradient-x text-text-primary w-full h-screen overflow-hidden">
+      {/* Background gradient handled by bg-app */}
 
       {/* Grid pattern overlay */}
       <div

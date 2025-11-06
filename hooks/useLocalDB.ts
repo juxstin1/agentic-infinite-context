@@ -1,55 +1,70 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
-import { Chat, Message, MemoryFact, CacheEntry, User, ToolMemory, MessageFeedback } from "../types";
-import { USERS } from "../constants";
-
-const createId = () => `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`;
+import { MemoryFact, CacheEntry, ToolMemory, MessageFeedback } from "../types";
+import { createId } from "../utils/ids";
 
 const STORAGE_KEYS = {
-  CHATS: 'agentic-terminal-chats',
-  MESSAGES: 'agentic-terminal-messages',
-  MEMORY: 'agentic-terminal-memory',
-  CACHE: 'agentic-terminal-cache',
-  TOOL_MEMORIES: 'agentic-terminal-tool-memories',
-  FEEDBACKS: 'agentic-terminal-feedbacks',
+  MEMORY: 'agentic-memory-v2',
+  CACHE: 'agentic-cache-v2',
+  TOOL_MEMORIES: 'agentic-tool-memories-v2',
+  FEEDBACKS: 'agentic-feedbacks-v2',
 };
 
-export const useLocalDB = () => {
-  const [chats, setChats] = useState<Chat[]>([]);
-  const [messages, setMessages] = useState<Message[]>([]);
-  const [memoryFacts, setMemoryFacts] = useState<MemoryFact[]>([]);
+interface MemoryFactWithWorkspace extends MemoryFact {
+  workspaceId?: string;
+}
+
+interface ToolMemoryWithWorkspace extends ToolMemory {
+  workspaceId?: string;
+}
+
+interface MessageFeedbackWithWorkspace extends MessageFeedback {
+  workspaceId?: string;
+}
+
+export const useLocalDB = (workspaceId?: string) => {
+  // All memory facts (unfiltered)
+  const [allMemoryFacts, setAllMemoryFacts] = useState<MemoryFactWithWorkspace[]>([]);
   const [cache, setCache] = useState<Record<string, CacheEntry>>({});
-  const [toolMemories, setToolMemories] = useState<ToolMemory[]>([]);
-  const [feedbacks, setFeedbacks] = useState<MessageFeedback[]>([]);
-  const [activeChatId, setActiveChatId] = useState<string | null>(null);
+  const [allToolMemories, setAllToolMemories] = useState<ToolMemoryWithWorkspace[]>([]);
+  const [allFeedbacks, setAllFeedbacks] = useState<MessageFeedbackWithWorkspace[]>([]);
+
   const [embeddingStatus] = useState<"idle" | "loading" | "ready">("ready");
   const [dbStatus] = useState<"idle" | "loading" | "ready">("ready");
+
+  // Filter by workspace
+  const memoryFacts = useMemo(() =>
+    workspaceId ? allMemoryFacts.filter(f => f.workspaceId === workspaceId) : allMemoryFacts,
+    [allMemoryFacts, workspaceId]
+  );
+
+  const toolMemories = useMemo(() =>
+    workspaceId ? allToolMemories.filter(m => m.workspaceId === workspaceId) : allToolMemories,
+    [allToolMemories, workspaceId]
+  );
+
+  const feedbacks = useMemo(() =>
+    workspaceId ? allFeedbacks.filter(f => f.workspaceId === workspaceId) : allFeedbacks,
+    [allFeedbacks, workspaceId]
+  );
 
   // Load from localStorage on mount
   useEffect(() => {
     const loadPersistedData = () => {
       try {
-        const savedChats = localStorage.getItem(STORAGE_KEYS.CHATS);
-        if (savedChats) setChats(JSON.parse(savedChats));
-
-        const savedMessages = localStorage.getItem(STORAGE_KEYS.MESSAGES);
-        if (savedMessages) setMessages(JSON.parse(savedMessages));
-
         const savedMemory = localStorage.getItem(STORAGE_KEYS.MEMORY);
-        if (savedMemory) setMemoryFacts(JSON.parse(savedMemory));
+        if (savedMemory) setAllMemoryFacts(JSON.parse(savedMemory));
 
         const savedCache = localStorage.getItem(STORAGE_KEYS.CACHE);
         if (savedCache) setCache(JSON.parse(savedCache));
 
         const savedToolMemories = localStorage.getItem(STORAGE_KEYS.TOOL_MEMORIES);
-        if (savedToolMemories) setToolMemories(JSON.parse(savedToolMemories));
+        if (savedToolMemories) setAllToolMemories(JSON.parse(savedToolMemories));
 
         const savedFeedbacks = localStorage.getItem(STORAGE_KEYS.FEEDBACKS);
-        if (savedFeedbacks) setFeedbacks(JSON.parse(savedFeedbacks));
+        if (savedFeedbacks) setAllFeedbacks(JSON.parse(savedFeedbacks));
       } catch (error) {
         console.error('Failed to load persisted data:', error);
         // Clear corrupted data
-        localStorage.removeItem(STORAGE_KEYS.CHATS);
-        localStorage.removeItem(STORAGE_KEYS.MESSAGES);
         localStorage.removeItem(STORAGE_KEYS.MEMORY);
         localStorage.removeItem(STORAGE_KEYS.CACHE);
         localStorage.removeItem(STORAGE_KEYS.TOOL_MEMORIES);
@@ -62,28 +77,20 @@ export const useLocalDB = () => {
 
   // Save to localStorage on changes
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEYS.CHATS, JSON.stringify(chats));
-  }, [chats]);
-
-  useEffect(() => {
-    localStorage.setItem(STORAGE_KEYS.MESSAGES, JSON.stringify(messages));
-  }, [messages]);
-
-  useEffect(() => {
-    localStorage.setItem(STORAGE_KEYS.MEMORY, JSON.stringify(memoryFacts));
-  }, [memoryFacts]);
+    localStorage.setItem(STORAGE_KEYS.MEMORY, JSON.stringify(allMemoryFacts));
+  }, [allMemoryFacts]);
 
   useEffect(() => {
     localStorage.setItem(STORAGE_KEYS.CACHE, JSON.stringify(cache));
   }, [cache]);
 
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEYS.TOOL_MEMORIES, JSON.stringify(toolMemories));
-  }, [toolMemories]);
+    localStorage.setItem(STORAGE_KEYS.TOOL_MEMORIES, JSON.stringify(allToolMemories));
+  }, [allToolMemories]);
 
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEYS.FEEDBACKS, JSON.stringify(feedbacks));
-  }, [feedbacks]);
+    localStorage.setItem(STORAGE_KEYS.FEEDBACKS, JSON.stringify(allFeedbacks));
+  }, [allFeedbacks]);
 
   // Cache cleanup mechanism
   useEffect(() => {
@@ -105,55 +112,37 @@ export const useLocalDB = () => {
     return () => clearInterval(interval);
   }, []);
 
-  const createChat = useCallback((title: string, participants: User[]) => {
-    const newChat: Chat = {
-      id: createId(),
-      created_at: new Date().toISOString(),
-      title,
-      participants,
+  const addFact = useCallback(async (fact: Omit<MemoryFactWithWorkspace, 'id' | 'first_seen' | 'last_seen'> & Partial<Pick<MemoryFactWithWorkspace, 'id' | 'first_seen' | 'last_seen'>>) => {
+    const now = new Date().toISOString();
+    const factWithWorkspace: MemoryFactWithWorkspace = {
+      id: fact.id || createId(),
+      workspaceId: workspaceId,
+      first_seen: fact.first_seen || now,
+      last_seen: fact.last_seen || now,
+      ...fact,
     };
-    setChats(prev => [newChat, ...prev]);
-    setActiveChatId(newChat.id);
-    return newChat;
-  }, []);
 
-  useEffect(() => {
-    if (chats.length === 0) {
-      createChat("Main Chat", USERS);
-    } else if (!activeChatId) {
-      setActiveChatId(chats[0].id);
-    }
-  }, [chats, activeChatId, createChat]);
-
-  const addMessage = useCallback((message: Message) => {
-    setMessages(prev => [...prev, message]);
-  }, []);
-
-  const addFact = useCallback(async (fact: MemoryFact) => {
-    setMemoryFacts(prev => {
-      const existingIndex = prev.findIndex(item => item.id === fact.id);
+    setAllMemoryFacts(prev => {
+      const existingIndex = prev.findIndex(item => item.id === factWithWorkspace.id);
       const nextFacts = [...prev];
       if (existingIndex >= 0) {
-        nextFacts[existingIndex] = { ...nextFacts[existingIndex], ...fact, last_seen: new Date().toISOString() };
+        nextFacts[existingIndex] = {
+          ...nextFacts[existingIndex],
+          ...factWithWorkspace,
+          last_seen: now
+        };
         return nextFacts;
       }
-      return [
-        ...nextFacts,
-        {
-          ...fact,
-          first_seen: fact.first_seen ?? new Date().toISOString(),
-          last_seen: fact.last_seen ?? new Date().toISOString(),
-        },
-      ];
+      return [...nextFacts, factWithWorkspace];
     });
-  }, []);
+  }, [workspaceId]);
 
   const deleteFact = useCallback(async (factId: string) => {
-    setMemoryFacts(prev => prev.filter(f => f.id !== factId));
+    setAllMemoryFacts(prev => prev.filter(f => f.id !== factId));
   }, []);
 
-  const updateFact = useCallback((factId: string, updates: Partial<MemoryFact>) => {
-    setMemoryFacts(prev => {
+  const updateFact = useCallback((factId: string, updates: Partial<MemoryFactWithWorkspace>) => {
+    setAllMemoryFacts(prev => {
       const index = prev.findIndex(f => f.id === factId);
       if (index === -1) return prev;
       const updated = [...prev];
@@ -162,45 +151,55 @@ export const useLocalDB = () => {
     });
   }, []);
 
-  const addToolMemory = useCallback((memory: ToolMemory) => {
-    setToolMemories(prev => {
-      const index = prev.findIndex(m => m.tool_name === memory.tool_name);
+  const addToolMemory = useCallback((memory: Omit<ToolMemoryWithWorkspace, 'id' | 'created_at'> & Partial<Pick<ToolMemoryWithWorkspace, 'id' | 'created_at'>>) => {
+    const memoryWithWorkspace: ToolMemoryWithWorkspace = {
+      id: memory.id || createId(),
+      created_at: memory.created_at || new Date().toISOString(),
+      workspaceId: workspaceId,
+      ...memory,
+    };
+
+    setAllToolMemories(prev => {
+      const index = prev.findIndex(m =>
+        m.tool_name === memoryWithWorkspace.tool_name &&
+        m.workspaceId === memoryWithWorkspace.workspaceId
+      );
       if (index >= 0) {
         const updated = [...prev];
-        updated[index] = memory;
+        updated[index] = memoryWithWorkspace;
         return updated;
       }
-      return [...prev, memory];
+      return [...prev, memoryWithWorkspace];
     });
-  }, []);
+  }, [workspaceId]);
 
-  const addFeedback = useCallback((feedback: MessageFeedback) => {
-    setFeedbacks(prev => {
-      const index = prev.findIndex(f => f.message_id === feedback.message_id);
+  const addFeedback = useCallback((feedback: Omit<MessageFeedbackWithWorkspace, 'created_at'> & Partial<Pick<MessageFeedbackWithWorkspace, 'created_at'>>) => {
+    const feedbackWithWorkspace: MessageFeedbackWithWorkspace = {
+      created_at: feedback.created_at || new Date().toISOString(),
+      workspaceId: workspaceId,
+      ...feedback,
+    };
+
+    setAllFeedbacks(prev => {
+      const index = prev.findIndex(f =>
+        f.message_id === feedbackWithWorkspace.message_id &&
+        f.workspaceId === feedbackWithWorkspace.workspaceId
+      );
       if (index >= 0) {
         const updated = [...prev];
-        updated[index] = feedback;
+        updated[index] = feedbackWithWorkspace;
         return updated;
       }
-      return [...prev, feedback];
+      return [...prev, feedbackWithWorkspace];
     });
-  }, []);
+  }, [workspaceId]);
 
-  const getCacheEntry = useCallback((key: string): Message | null => {
+  const getCacheEntry = useCallback((key: string): any | null => {
     const entry = cache[key];
     if (!entry) return null;
-    
+
     try {
-      const parsed = JSON.parse(entry.response_json) as Message;
-      // Validate parsed message structure
-      if (!parsed.id || !parsed.content || !parsed.chat_id) {
-        console.warn('Invalid cache entry structure:', parsed);
-        setCache(prev => {
-          const { [key]: removed, ...rest } = prev;
-          return rest;
-        });
-        return null;
-      }
+      const parsed = JSON.parse(entry.response_json);
       return parsed;
     } catch (error) {
       console.error('Cache entry parse error:', error);
@@ -213,7 +212,7 @@ export const useLocalDB = () => {
     }
   }, [cache]);
 
-  const setCacheEntry = useCallback((key: string, response: Message, ttlSec = 60 * 60 * 24 * 7) => {
+  const setCacheEntry = useCallback((key: string, response: any, ttlSec = 60 * 60 * 24 * 7) => {
     const entry: CacheEntry = {
       key_hash: key,
       response_json: JSON.stringify(response),
@@ -223,28 +222,33 @@ export const useLocalDB = () => {
     setCache(prev => ({ ...prev, [key]: entry }));
   }, []);
 
-  const findRelevantFacts = useCallback(async (prompt: string, limit = 5): Promise<MemoryFact[]> => {
+  const findRelevantFacts = useCallback(async (prompt: string, limit = 5): Promise<MemoryFactWithWorkspace[]> => {
     if (!prompt.trim()) return memoryFacts.slice(0, limit);
-    
+
     const lowered = prompt.toLowerCase();
     const words = lowered.split(/\s+/).filter(word => word.length > 2);
-    
+
     const scored = memoryFacts.map(fact => {
       const factLower = fact.fact.toLowerCase();
       let score = 0;
-      
+
       // Exact match bonus
       if (factLower.includes(lowered)) score += 3;
-      
+
       // Word-based scoring
       words.forEach(word => {
         if (factLower.includes(word)) score += 1;
       });
-      
+
       // Recency bonus (more recent facts are more relevant)
       const daysAgo = (Date.now() - new Date(fact.last_seen).getTime()) / (1000 * 60 * 60 * 24);
       score += Math.max(0, 7 - daysAgo) * 0.1; // Bonus for recent facts
-      
+
+      // Confidence boost (if available)
+      if (fact.confidence) {
+        score += fact.confidence * 0.5;
+      }
+
       return { fact, score };
     })
     .filter(item => item.score > 0)
@@ -255,28 +259,26 @@ export const useLocalDB = () => {
     return scored.length > 0 ? scored : memoryFacts.slice(0, limit);
   }, [memoryFacts]);
 
-  // Memoize derived data for performance
-  const activeChatMessages = useMemo(() =>
-    messages.filter(message => message.chat_id === activeChatId),
-    [messages, activeChatId]
-  );
-
-  const chatParticipants = useMemo(() =>
-    chats.find(chat => chat.id === activeChatId)?.participants || [],
-    [chats, activeChatId]
-  );
+  // Memoize cache stats
+  const cacheStats = useMemo(() => {
+    const entries = Object.keys(cache).length;
+    return {
+      entries,
+      hits: 0, // Would need tracking logic
+      misses: 0, // Would need tracking logic
+    };
+  }, [cache]);
 
   return {
-    chats,
-    messages,
+    // Workspace-scoped data
     memoryFacts,
-    cache,
     toolMemories,
     feedbacks,
-    activeChatId,
-    setActiveChatId,
-    createChat,
-    addMessage,
+
+    // Global data
+    cache,
+
+    // Methods
     addFact,
     deleteFact,
     updateFact,
@@ -285,11 +287,14 @@ export const useLocalDB = () => {
     getCacheEntry,
     setCacheEntry,
     findRelevantFacts,
+
+    // Status
     embeddingStatus,
     dbStatus,
-    activeChatMessages,
-    chatParticipants,
-    setMemoryFacts,
-    setToolMemories,
+    cacheStats,
+
+    // Setters (for compatibility)
+    setMemoryFacts: setAllMemoryFacts,
+    setToolMemories: setAllToolMemories,
   };
 };

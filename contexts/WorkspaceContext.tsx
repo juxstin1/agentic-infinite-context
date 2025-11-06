@@ -22,6 +22,7 @@ interface WorkspaceContextType {
   updateWorkspace: (id: string, data: Partial<Workspace>) => void;
   deleteWorkspace: (id: string) => void;
   setActiveWorkspace: (id: string) => void;
+  switchWorkspace: (id: string) => void; // Alias for setActiveWorkspace
   duplicateWorkspace: (id: string) => Workspace;
 }
 
@@ -154,6 +155,7 @@ export const WorkspaceProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         updateWorkspace,
         deleteWorkspace,
         setActiveWorkspace,
+        switchWorkspace: setActiveWorkspace, // Alias for compatibility
         duplicateWorkspace,
       }}
     >
