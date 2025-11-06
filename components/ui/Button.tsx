@@ -29,18 +29,18 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
     ref
   ) => {
     const baseStyles =
-      'inline-flex items-center justify-center font-medium transition-all duration-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-neutral-900 disabled:opacity-50 disabled:cursor-not-allowed relative overflow-hidden';
+      'inline-flex items-center justify-center font-medium smooth-transition rounded-xl2 focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed relative overflow-hidden';
 
     const variants = {
       primary:
-        'bg-gradient-to-r from-primary-600 to-primary-500 hover:from-primary-700 hover:to-primary-600 text-white shadow-lg shadow-primary-500/25 focus:ring-primary-500',
+        'bg-gradient-to-r from-brand-600 to-brand-500 hover:from-brand-700 hover:to-brand-600 text-white elevation-lift focus:ring-2 focus:ring-brand-500/50',
       secondary:
-        'bg-white/5 hover:bg-white/10 text-neutral-100 border border-white/10 backdrop-blur-xl focus:ring-primary-500',
-      ghost: 'text-neutral-300 hover:bg-white/5 hover:text-white focus:ring-primary-500',
+        'bg-surface-800/70 hover:bg-surface-700/70 text-text-primary border border-border/60 backdrop-blur-xl elevation-1 focus:ring-2 focus:ring-brand-500/50',
+      ghost: 'text-text-secondary hover:bg-surface-800/50 hover:text-text-primary focus:ring-2 focus:ring-brand-500/50',
       danger:
-        'bg-gradient-to-r from-error-DEFAULT to-error-light hover:from-error-dark hover:to-error-DEFAULT text-white shadow-lg shadow-error-DEFAULT/25 focus:ring-error-DEFAULT',
+        'bg-gradient-to-r from-error-DEFAULT to-error-light hover:from-error-DEFAULT/90 hover:to-error-light/90 text-white elevation-lift focus:ring-2 focus:ring-error-DEFAULT/50',
       success:
-        'bg-gradient-to-r from-success-DEFAULT to-success-light hover:from-success-dark hover:to-success-DEFAULT text-white shadow-lg shadow-success-DEFAULT/25 focus:ring-success-DEFAULT',
+        'bg-gradient-to-r from-success-DEFAULT to-success-light hover:from-success-DEFAULT/90 hover:to-success-light/90 text-white elevation-lift focus:ring-2 focus:ring-success-DEFAULT/50',
     };
 
     const sizes = {

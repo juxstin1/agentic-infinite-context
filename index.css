@@ -1,0 +1,100 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --radius: 1.25rem;
+}
+
+/* Premium app background with gradient + radial glows */
+.bg-app {
+  background:
+    radial-gradient(1200px 600px at 10% -10%, rgba(124, 58, 237, 0.10), transparent 35%),
+    radial-gradient(1000px 500px at 90% 10%, rgba(34, 211, 238, 0.08), transparent 30%),
+    linear-gradient(180deg, #0D1220 0%, #0A0D14 100%);
+  background-size: 200% 200%;
+}
+
+/* Premium scrollbars (subtle, no neon colors) */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(120, 130, 150, 0.35) transparent;
+}
+
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, rgba(120, 130, 150, 0.35), rgba(120, 130, 150, 0.15));
+  border-radius: 9999px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+/* Consistent focus states */
+:where(button, a, input, textarea, [role="switch"], [role="menuitem"]):focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(124, 58, 237, 0.55);
+  border-radius: 10px;
+}
+
+/* Typography rhythm */
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-weight: 600;
+  line-height: 1.2;
+}
+
+p, li, span {
+  line-height: 1.6;
+}
+
+/* Glassmorphism utilities */
+.glass {
+  background: rgba(15, 20, 34, 0.75);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.glass-hover:hover {
+  background: rgba(20, 27, 46, 0.8);
+  border-color: rgba(124, 58, 237, 0.3);
+}
+
+/* Premium elevation */
+.elevation-1 {
+  box-shadow: 0 1px 0 0 rgba(255, 255, 255, 0.05) inset, 0 8px 30px rgba(0, 0, 0, 0.45);
+}
+
+.elevation-2 {
+  box-shadow: 0 1px 0 0 rgba(255, 255, 255, 0.05) inset, 0 12px 40px rgba(0, 0, 0, 0.5);
+}
+
+.elevation-lift {
+  box-shadow: 0 8px 24px rgba(124, 58, 237, 0.22);
+}
+
+/* Smooth transitions */
+.smooth-transition {
+  transition: background-color 0.2s, transform 0.2s, box-shadow 0.2s, border-color 0.2s;
+}
+
+/* Reduce motion for accessibility */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

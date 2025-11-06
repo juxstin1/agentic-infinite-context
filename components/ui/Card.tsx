@@ -22,15 +22,15 @@ const Card = React.forwardRef<HTMLDivElement, CardProps>(
     },
     ref
   ) => {
-    const baseStyles = 'rounded-2xl transition-all duration-300';
+    const baseStyles = 'rounded-xl3 smooth-transition';
 
     const variants = {
       glass:
-        'bg-white/5 backdrop-blur-xl border border-white/10 hover:border-white/20',
-      filled: 'bg-neutral-800/50 border border-neutral-700/50',
-      bordered: 'bg-transparent border-2 border-neutral-700',
+        'bg-surface-900/75 backdrop-blur-xl border border-border/60 hover:border-brand-500/30 elevation-1',
+      filled: 'bg-surface-800/90 border border-border/50 elevation-1',
+      bordered: 'bg-transparent border-2 border-border',
       elevated:
-        'bg-neutral-800/80 border border-neutral-700/30 shadow-2xl shadow-black/50',
+        'bg-surface-900/90 border border-border/40 elevation-2',
     };
 
     const paddings = {
@@ -48,7 +48,7 @@ const Card = React.forwardRef<HTMLDivElement, CardProps>(
           variants[variant],
           paddings[padding],
           interactive && 'cursor-pointer hover:scale-[1.02]',
-          glow && 'shadow-lg shadow-primary-500/20',
+          glow && 'elevation-lift shadow-glow',
           className
         )}
         whileHover={interactive ? { y: -2 } : undefined}
