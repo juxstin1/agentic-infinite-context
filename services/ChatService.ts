@@ -30,7 +30,7 @@ export class ChatService {
   /**
    * Build messages array for API request
    */
-  private buildMessages(options: ChatCompletionOptions): any[] {
+  private buildMessages(options: ChatCompletionOptions): Array<{ role: string; content: string }> {
     const { prompt, currentUser, participants, context, memory, workspace } = options;
 
     // Build system prompt
@@ -175,11 +175,15 @@ export class ChatService {
       }
 
       callbacks.onComplete(buffer);
-    } catch (error: any) {
-      if (error.name === 'AbortError') {
-        callbacks.onError('Request cancelled');
+    } catch (error) {
+      if (error instanceof Error) {
+        if (error.name === 'AbortError') {
+          callbacks.onError('Request cancelled');
+        } else {
+          callbacks.onError(error.message || 'Unknown error occurred');
+        }
       } else {
-        callbacks.onError(error.message || 'Unknown error occurred');
+        callbacks.onError('Unknown error occurred');
       }
     }
   }

@@ -38,7 +38,7 @@
 
 ```bash
 # Clone the repository
-git clone https://github.com/yourusername/agentic-infinite-context.git
+git clone https://github.com/juxstin1/agentic-infinite-context.git
 cd agentic-infinite-context
 
 # Install dependencies
@@ -246,10 +246,7 @@ agentic-infinite-context/
 │   ├── LearningService.ts   # Memory + semantic search
 │   ├── ChatService.ts       # AI completions
 │   ├── CommandService.ts    # Unified commands
-│   ├── ModelService.ts      # Model discovery
-│   ├── semanticMemory.ts    # (Legacy - consolidated)
-│   ├── recursiveLearningEngine.ts  # (Legacy)
-│   └── aiService.ts         # (Legacy - consolidated)
+│   └── ModelService.ts      # Model discovery
 ├── utils/               # Shared utilities
 │   └── ids.ts              # ID generation
 ├── design-system/       # Design tokens & utilities
@@ -260,9 +257,9 @@ agentic-infinite-context/
 
 ### Code Quality Metrics
 
-- **App.tsx**: 813 → 413 lines (-49% reduction!)
-- **Services**: 4 unified services replacing 8+ scattered implementations
-- **TypeScript**: 100% type-safe, zero `any` abuse
+- **App.tsx**: 413 lines (clean, focused)
+- **Services**: 4 unified services (legacy files removed)
+- **TypeScript**: Strongly typed with proper error handling
 - **Build time**: ~8 seconds
 - **Bundle size**: 531 kB (optimized)
 
@@ -344,7 +341,7 @@ Package as Electron or Tauri app for native desktop experience.
 - [ ] **Advanced reasoning** – Chain-of-thought, tree-of-thoughts patterns
 - [ ] **Multi-modal** – Image understanding and generation
 
-Want to contribute? See [CONTRIBUTING.md](./CONTRIBUTING.md)
+Want to contribute? Open a pull request!
 
 ---
 
@@ -389,10 +386,7 @@ export class EverythingManager {
 
 ## 📚 Documentation
 
-- [Architecture Guide](./docs/ARCHITECTURE.md) _(coming soon)_
-- [API Reference](./docs/API.md) _(coming soon)_
-- [Deployment Guide](./docs/DEPLOYMENT.md) _(coming soon)_
-- [Troubleshooting](./docs/TROUBLESHOOTING.md) _(coming soon)_
+Documentation is provided inline in this README. Additional docs coming soon.
 
 ---
 
@@ -425,10 +419,8 @@ This project is licensed under the **MIT License** – see the [LICENSE](./LICEN
 
 ## 🔗 Links
 
-- **Documentation**: [Coming Soon]
-- **Issue Tracker**: [GitHub Issues](https://github.com/yourusername/agentic-infinite-context/issues)
-- **Discussions**: [GitHub Discussions](https://github.com/yourusername/agentic-infinite-context/discussions)
-- **Changelog**: [CHANGELOG.md](./CHANGELOG.md)
+- **Issue Tracker**: [GitHub Issues](https://github.com/juxstin1/agentic-infinite-context/issues)
+- **Discussions**: [GitHub Discussions](https://github.com/juxstin1/agentic-infinite-context/discussions)
 
 ---
 

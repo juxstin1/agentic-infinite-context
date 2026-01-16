@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo } from "react";
+import React, { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import EnhancedChatWindow from "./components/chat/EnhancedChatWindow";
 import SidePanel from "./components/SidePanel";
 import AppLayout from "./components/layout/AppLayout";
@@ -26,8 +26,6 @@ import {
   ASSISTANT_USER,
   MAX_CONCURRENT_MODELS,
 } from "./constants";
-
-const LM_STUDIO_MODELS_ENDPOINT = "http://localhost:1234/v1/models";
 
 const sortModelsForDisplay = (models: ModelConfig[]) => {
   const priority = (model: ModelConfig) => {
@@ -70,7 +68,7 @@ const AppContent: React.FC = () => {
   const [lmStudioModels, setLmStudioModels] = useState<ModelConfig[]>([]);
   const [selectedModels, setSelectedModels] = useState<Model[]>([]);
   const [activeStreams, setActiveStreams] = useState<Record<string, StreamingResponse>>({});
-  const [streamControllers] = useState<Record<string, AbortController>>({});
+  const streamControllersRef = useRef<Record<string, AbortController>>({});
 
   // Settings panel state
   const [isSettingsPanelOpen, setSettingsPanelOpen] = useState(false);
@@ -172,12 +170,13 @@ const AppContent: React.FC = () => {
               modelLabel: 'System',
             });
             return;
-          } catch (error: any) {
+          } catch (error) {
+            const errorMessage = error instanceof Error ? error.message : 'Unknown error';
             addMessage(activeChat.id, {
               role: Role.System,
               senderId: 'system',
               senderName: 'System',
-              content: `Error executing command: ${error.message}`,
+              content: `Error executing command: ${errorMessage}`,
               modelId: 'system',
               modelLabel: 'System',
             });
@@ -220,7 +219,7 @@ const AppContent: React.FC = () => {
         }));
 
         const controller = new AbortController();
-        streamControllers[responseId] = controller;
+        streamControllersRef.current[responseId] = controller;
 
         await chatService.streamCompletion({
           prompt: trimmedContent,
@@ -273,7 +272,7 @@ const AppContent: React.FC = () => {
                 delete updated[responseId];
                 return updated;
               });
-              delete streamControllers[responseId];
+              delete streamControllersRef.current[responseId];
               setIsStreaming(false);
             },
             onError: (error: string) => {
@@ -293,18 +292,18 @@ const AppContent: React.FC = () => {
                 delete updated[responseId];
                 return updated;
               });
-              delete streamControllers[responseId];
+              delete streamControllersRef.current[responseId];
               setIsStreaming(false);
             }
           }
         });
-      } catch (error: any) {
+      } catch (error) {
         console.error('Error sending message:', error);
         setIsStreaming(false);
       }
     },
     [activeChat, isStreaming, currentUser, messages, findRelevantFacts,
-     availableModels, selectedModels, activeWorkspace, addMessage, setIsStreaming, addFact, streamControllers]
+     availableModels, selectedModels, activeWorkspace, addMessage, setIsStreaming, addFact]
   );
 
   // Handle command execution from command palette
